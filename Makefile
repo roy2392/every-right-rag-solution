@@ -1,29 +1,28 @@
 install:
 	pip install --upgrade pip &&\
-		pip install -r requirements.txt
+		pip install -r app/requirements.txt
 
 format:	
-	black *.py 
+	black app/*.py 
 
 lint:
-	pylint --disable=R,C *.py
+	pylint --disable=R,C app/*.py
 
 test:
-	python -m pytest tests/ -vv --cov=.
+	python -m pytest tests/ -vv --cov=app
 
 hf-login:
 	pip install -U "huggingface_hub[cli]"
 	huggingface-cli login --token $(HF)
 
 push-hub:
-	huggingface-cli upload roeyzalta/every-right-rag-solution ./app.py --repo-type=space --commit-message="Update app.py"
-	huggingface-cli upload roeyzalta/every-right-rag-solution ./requirements.txt --repo-type=space --commit-message="Update requirements"
-	huggingface-cli upload roeyzalta/every-right-rag-solution ./.env.example --repo-type=space --commit-message="Update .env.example"
+	huggingface-cli upload roeyzalta/every-right-rag-solution ./app/app.py --repo-type=space --commit-message="Update app.py"
+	huggingface-cli upload roeyzalta/every-right-rag-solution ./app/requirements.txt --repo-type=space --commit-message="Update requirements"
 
 deploy: hf-login push-hub
 
 run:
-	python app.py
+	python app/app.py
 
 update-branch:
 	git config --global user.name $(USER_NAME)
