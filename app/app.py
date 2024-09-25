@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 from bidi.algorithm import get_display
 import arabic_reshaper
+import time
+from functools import wraps
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +32,25 @@ index = pc.Index(os.getenv('PINECONE_INDEX'))
 anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
 claude = Anthropic(api_key=anthropic_api_key)
 
+# Rate limiter
+def rate_limit(max_per_minute):
+    min_interval = 60.0 / max_per_minute
+    last_called = [0.0]
+
+    def decorate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            elapsed = time.time() - last_called[0]
+            left_to_wait = min_interval - elapsed
+            if left_to_wait > 0:
+                time.sleep(left_to_wait)
+            ret = func(*args, **kwargs)
+            last_called[0] = time.time()
+            return ret
+        return wrapper
+    return decorate
+
+@rate_limit(max_per_minute=50)  # Adjust this value based on your API limits
 def embed_query(query_text):
     try:
         response = claude.messages.create(
@@ -58,6 +79,7 @@ def query_pinecone(query, top_k=5):
     result = index.query(vector=query_embedding, top_k=top_k, include_metadata=True)
     return result['matches']
 
+@rate_limit(max_per_minute=50)  # Adjust this value based on your API limits
 def ask_claude_about_documents(query_text):
     documents = query_pinecone(query_text)
     combined_documents = "\n\n".join([doc['metadata']['text'] for doc in documents])
@@ -73,7 +95,7 @@ def ask_claude_about_documents(query_text):
         )
         return response.content[0].text
     except Exception as e:
-        raise Exception(f"Error querying Claude: {str(e)}")
+        return f"Error querying Claude: {str(e)}"
 
 def display_hebrew(text):
     reshaped_text = arabic_reshaper.reshape(text)
@@ -81,21 +103,30 @@ def display_hebrew(text):
     return bidi_text
 
 def chat_function(message, history):
-    response = ask_claude_about_documents(message)
-    displayed_response = display_hebrew(response)
-    return displayed_response
+    try:
+        response = ask_claude_about_documents(message)
+        displayed_response = display_hebrew(response)
+        return displayed_response
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
-# Gradio Interface
-iface = gr.ChatInterface(
-    chat_function,
-    title="Hebrew RAG Chat with Claude and Pinecone",
-    description="Ask questions in Hebrew about documents stored in Pinecone.",
-    examples=[
-        "על פי מה נקבע שכר המינימום בישראל?",
-        "מהם החוקים העיקריים הנוגעים לזכויות עובדים בישראל?",
-        "כיצד מחושבים דמי אבטלה בישראל?"
-    ],
-    theme=gr.themes.Soft()
-)
+with gr.Blocks() as demo:
+    chatbot = gr.Chatbot()
+    msg = gr.Textbox()
+    clear = gr.Button("Clear")
 
-iface.launch()
+    def user(user_message, history):
+        return "", history + [[user_message, None]]
+
+    def bot(history):
+        user_message = history[-1][0]
+        bot_message = chat_function(user_message, history)
+        history[-1][1] = bot_message
+        return history
+
+    msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
+        bot, chatbot, chatbot
+    )
+    clear.click(lambda: None, None, chatbot, queue=False)
+
+demo.launch()
