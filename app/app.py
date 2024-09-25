@@ -116,7 +116,7 @@ with gr.Blocks() as demo:
     clear = gr.Button("Clear")
 
     def user(user_message, history):
-        return "", history + [[user_message, None]]
+        return "", history + [[display_hebrew(user_message), None]]
 
     def bot(history):
         user_message = history[-1][0]
