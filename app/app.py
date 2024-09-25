@@ -98,25 +98,29 @@ def ask_claude_about_documents(query_text):
         return f"Error querying Claude: {str(e)}"
 
 def display_hebrew(text):
-    reshaped_text = arabic_reshaper.reshape(text)
-    bidi_text = get_display(reshaped_text)
-    return bidi_text
+    return text  # Remove any text manipulation here
 
 def chat_function(message, history):
     try:
         response = ask_claude_about_documents(message)
-        displayed_response = display_hebrew(response)
-        return displayed_response
+        return response  # Return the response without any manipulation
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
-with gr.Blocks() as demo:
-    chatbot = gr.Chatbot()
-    msg = gr.Textbox()
+css = """
+.rtl-text { 
+    direction: rtl !important; 
+    text-align: right !important;
+}
+"""
+
+with gr.Blocks(css=css) as demo:
+    chatbot = gr.Chatbot(elem_classes="rtl-text")
+    msg = gr.Textbox(elem_classes="rtl-text")
     clear = gr.Button("Clear")
 
     def user(user_message, history):
-        return "", history + [[display_hebrew(user_message), None]]
+        return "", history + [[user_message, None]]
 
     def bot(history):
         user_message = history[-1][0]
