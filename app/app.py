@@ -11,29 +11,34 @@ from functools import wraps
 # Load environment variables
 load_dotenv()
 
-script_dir = os.path.dirname(os.path.realpath(__file__))  # Get the directory where the script is located
-file_path = os.path.join(script_dir, 'prompt_template.txt')  # Create the full file path
-with open(file_path, 'r', encoding='utf-8') as f:
+script_dir = os.path.dirname(
+    os.path.realpath(__file__)
+)  # Get the directory where the script is located
+file_path = os.path.join(script_dir, "prompt_template.txt")  # Create the full file path
+with open(file_path, "r", encoding="utf-8") as f:
     file_content = f.read()
+
 
 # Initialize Pinecone
 def init_pinecone():
-    pinecone_client = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-    if os.getenv('PINECONE_INDEX') not in pinecone_client.list_indexes().names():
+    pinecone_client = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    if os.getenv("PINECONE_INDEX") not in pinecone_client.list_indexes().names():
         pinecone_client.create_index(
-            name=os.getenv('PINECONE_INDEX'),
+            name=os.getenv("PINECONE_INDEX"),
             dimension=1536,
-            metric='euclidean',
-            spec=ServerlessSpec(cloud='aws')
+            metric="euclidean",
+            spec=ServerlessSpec(cloud="aws"),
         )
     return pinecone_client
 
+
 pc = init_pinecone()
-index = pc.Index(os.getenv('PINECONE_INDEX'))
+index = pc.Index(os.getenv("PINECONE_INDEX"))
 
 # Initialize Anthropic
-anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 claude = Anthropic(api_key=anthropic_api_key)
+
 
 # Rate limiter
 def rate_limit(max_per_minute):
@@ -50,8 +55,11 @@ def rate_limit(max_per_minute):
             ret = func(*args, **kwargs)
             last_called[0] = time.time()
             return ret
+
         return wrapper
+
     return decorate
+
 
 @rate_limit(max_per_minute=50)  # Adjust this value based on your API limits
 def embed_query(query_text):
@@ -61,11 +69,14 @@ def embed_query(query_text):
             max_tokens=1536,
             system="You are an assistant that helps create embeddings. Please provide a 1536-dimensional embedding for the given text. Respond only with the embedding values separated by commas, enclosed in square brackets.",
             messages=[
-                {"role": "user", "content": f"Generate a 1536-dimensional embedding for this text: {query_text}"}
-            ]
+                {
+                    "role": "user",
+                    "content": f"Generate a 1536-dimensional embedding for this text: {query_text}",
+                }
+            ],
         )
         embedding = response.content[0].text
-        embedding_list = [float(x) for x in embedding.strip('[]').split(',')]
+        embedding_list = [float(x) for x in embedding.strip("[]").split(",")]
         if len(embedding_list) != 1536:
             raise ValueError(f"Expected 1536 dimensions, but got {len(embedding_list)}")
         return embedding_list
@@ -79,28 +90,29 @@ def embed_query(query_text):
         np.random.seed(seed_value)
         return np.random.rand(1536).tolist()
 
+
 def query_pinecone(query, top_k=5):
     query_embedding = embed_query(query)
     result = index.query(vector=query_embedding, top_k=top_k, include_metadata=True)
-    return result['matches']
+    return result["matches"]
+
 
 @rate_limit(max_per_minute=50)  # Adjust this value based on your API limits
 def ask_claude_about_documents(query_text):
     documents = query_pinecone(query_text)
-    combined_documents = "\n\n".join([doc['metadata']['text'] for doc in documents])
+    combined_documents = "\n\n".join([doc["metadata"]["text"] for doc in documents])
     full_prompt = f"המסמכים שקיבלתי הם: \n\n{combined_documents}\n\nשאלה: {query_text}"
     try:
         response = claude.messages.create(
             model="claude-3-opus-20240229",
             max_tokens=1024,
             system=file_content,
-            messages=[
-                {"role": "user", "content": full_prompt}
-            ]
+            messages=[{"role": "user", "content": full_prompt}],
         )
         return response.content[0].text
     except Exception as e:
         return f"Error querying Claude: {str(e)}"
+
 
 def chat_function(message):
     try:
@@ -108,6 +120,7 @@ def chat_function(message):
         return response  # Return the response without any manipulation
     except Exception as e:
         return f"An error occurred: {str(e)}"
+
 
 css = """
 .rtl-text { 
