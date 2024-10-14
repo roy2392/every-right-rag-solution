@@ -97,9 +97,9 @@ def query_pinecone(query, top_k=5):
         raise ValueError("Embedding generation failed.")
     if len(query_embedding) != 1536:
         raise ValueError(f"Expected 1536 dimensions, but got {len(query_embedding)}")
-    
+
     result = index.query(vector=query_embedding, top_k=top_k, include_metadata=True)
-    return result['matches']
+    return result["matches"]
 
 
 @rate_limit(max_per_minute=50)  # Adjust this value based on your API limits
