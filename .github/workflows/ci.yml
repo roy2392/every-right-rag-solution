@@ -33,7 +33,7 @@ jobs:
       - name: Lint code
         run: |
           pip install pylint
-          pylint --disable=R,C *.py
+          pylint --disable=R,C .
 
       - name: Run tests
         run: |
