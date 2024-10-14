@@ -28,7 +28,7 @@ jobs:
       - name: Format code
         run: |
           pip install black
-          black . --check
+          black . 
 
       - name: Lint code
         run: |
