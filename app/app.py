@@ -13,6 +13,10 @@ from functools import wraps
 # Load environment variables
 load_dotenv()
 
+# Load the prompt template
+with open('prompt_template.txt', 'r') as file:
+    file_content = file.read()
+
 # Initialize Pinecone
 def init_pinecone():
     pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
@@ -88,7 +92,7 @@ def ask_claude_about_documents(query_text):
         response = claude.messages.create(
             model="claude-3-opus-20240229",
             max_tokens=1024,
-            system="You are an assistant that helps answer questions in Hebrew based on provided documents.",
+            system=file_content,
             messages=[
                 {"role": "user", "content": full_prompt}
             ]
