@@ -38,7 +38,7 @@ jobs:
       - name: Run tests
         run: |
           pip install pytest pytest-cov
-          python -m pytest tests/ -vv --cov=.
+          python -m pytest app/tests/ -vv --cov=.
 
       - name: Update branch
         env:
