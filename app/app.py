@@ -14,7 +14,7 @@ from functools import wraps
 load_dotenv()
 
 # Load the prompt template
-with open('prompt_template.txt', 'r') as file:
+with open('app/prompt_template.txt', 'r') as file:
     file_content = file.read()
 
 # Initialize Pinecone
