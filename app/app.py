@@ -5,14 +5,11 @@ import hashlib
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
-from bidi.algorithm import get_display
-import arabic_reshaper
 import time
 from functools import wraps
 
 # Load environment variables
 load_dotenv()
-
 
 script_dir = os.path.dirname(os.path.realpath(__file__))  # Get the directory where the script is located
 file_path = os.path.join(script_dir, 'prompt_template.txt')  # Create the full file path
@@ -31,7 +28,7 @@ def init_pinecone():
         )
     return pinecone_client
 
-pc = init_pinecone()  # Use this globally
+pc = init_pinecone()
 index = pc.Index(os.getenv('PINECONE_INDEX'))
 
 # Initialize Anthropic
@@ -72,6 +69,8 @@ def embed_query(query_text):
         if len(embedding_list) != 1536:
             raise ValueError(f"Expected 1536 dimensions, but got {len(embedding_list)}")
         return embedding_list
+    except ValueError as e:
+        print(f"ValueError: {str(e)}")
     except Exception as e:
         print(f"Warning: Error in embedding query: {str(e)}")
         hash_object = hashlib.md5(query_text.encode())
@@ -103,10 +102,7 @@ def ask_claude_about_documents(query_text):
     except Exception as e:
         return f"Error querying Claude: {str(e)}"
 
-def display_hebrew(text):
-    return text  # Remove any text manipulation here
-
-def chat_function(message, history):
+def chat_function(message):
     try:
         response = ask_claude_about_documents(message)
         return response  # Return the response without any manipulation
@@ -130,10 +126,11 @@ with gr.Blocks(css=css) as demo:
 
     def bot(history):
         user_message = history[-1][0]
-        bot_message = chat_function(user_message, history)
+        bot_message = chat_function(user_message)
         history[-1][1] = bot_message
         return history
 
+    # pylint: disable=no-member
     msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
         bot, chatbot, chatbot
     )
