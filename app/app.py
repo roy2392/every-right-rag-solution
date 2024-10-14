@@ -16,22 +16,22 @@ load_dotenv()
 
 script_dir = os.path.dirname(os.path.realpath(__file__))  # Get the directory where the script is located
 file_path = os.path.join(script_dir, 'prompt_template.txt')  # Create the full file path
-with open(file_path, 'r', encoding='utf-8') as f:) as file:
-    file_content = file.read()
+with open(file_path, 'r', encoding='utf-8') as f:
+    file_content = f.read()
 
 # Initialize Pinecone
 def init_pinecone():
-    pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-    if os.getenv('PINECONE_INDEX') not in pc.list_indexes().names():
-        pc.create_index(
+    pinecone_client = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+    if os.getenv('PINECONE_INDEX') not in pinecone_client.list_indexes().names():
+        pinecone_client.create_index(
             name=os.getenv('PINECONE_INDEX'),
             dimension=1536,
             metric='euclidean',
             spec=ServerlessSpec(cloud='aws')
         )
-    return pc
+    return pinecone_client
 
-pc = init_pinecone()
+pc = init_pinecone()  # Use this globally
 index = pc.Index(os.getenv('PINECONE_INDEX'))
 
 # Initialize Anthropic
