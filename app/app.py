@@ -16,7 +16,7 @@ load_dotenv()
 
 script_dir = os.path.dirname(os.path.realpath(__file__))  # Get the directory where the script is located
 file_path = os.path.join(script_dir, 'prompt_template.txt')  # Create the full file path
-with open(file_path, 'r') as file:
+with open(file_path, 'r', encoding='utf-8') as f:) as file:
     file_content = file.read()
 
 # Initialize Pinecone
